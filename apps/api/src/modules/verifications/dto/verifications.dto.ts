@@ -11,6 +11,7 @@ export class IdentityVerificationDto {
   phone!: string;
 
   @IsString()
+  @IsIn(["male", "female", "other"])
   gender!: string;
 }
 

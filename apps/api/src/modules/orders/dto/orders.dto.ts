@@ -4,6 +4,7 @@ import {
   IsArray,
   IsBoolean,
   IsDateString,
+  IsIn,
   IsInt,
   IsLatitude,
   IsLongitude,
@@ -55,6 +56,7 @@ export class CreateOrderDto {
   estimatedDurationMinutes!: number;
 
   @IsString()
+  @IsIn(["owned", "need_organizer_prepare", "unknown"])
   storageSupplyStatus!: string;
 
   @IsOptional()

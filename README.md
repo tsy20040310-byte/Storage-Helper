@@ -51,6 +51,8 @@ npm.cmd install
 ### 4. 启动后端
 
 ```bash
+npm run api:prisma:generate
+npm run api:db:push
 npm run dev:api
 ```
 
@@ -74,13 +76,42 @@ flutter run
 - 当前工作区未检测到 Flutter SDK 路径，首次运行前需先安装 Flutter 并加入 PATH
 - `apps/mobile` 已提供 Flutter 业务骨架；安装好 Flutter 后可在该目录执行 `flutter create --platforms=android,ios .` 补齐原生工程
 
+## API 开发账号
+
+- 短信验证码开发环境固定返回并接受：`123456`
+- 单主测试手机号：`13800000000`
+- 整理师测试手机号：`13900000000`
+
+## 后端数据库
+
+后端已接入 Prisma + PostgreSQL。首次启动数据库后执行：
+
+```bash
+npm run api:prisma:generate
+npm run api:db:push
+```
+
+主要 CRUD 已接入：
+
+- `POST /api/v1/auth/login`
+- `POST /api/v1/verifications/identity`
+- `GET /api/v1/verifications/identity/me`
+- `POST /api/v1/orders`
+- `GET /api/v1/orders`
+- `GET /api/v1/orders/:id`
+- `POST /api/v1/orders/:id/applications`
+- `PATCH /api/v1/orders/:id/applications/:applicationId/confirm`
+- `POST /api/v1/orders/:id/arrival-check`
+- `POST /api/v1/orders/:id/start`
+- `POST /api/v1/orders/:id/complete`
+
 ## 文档入口
 
-- [系统架构](C:/Users/81230/Documents/整理收纳app/docs/architecture.md)
-- [数据库 ER 图](C:/Users/81230/Documents/整理收纳app/docs/database-er.md)
-- [PostgreSQL 表结构](C:/Users/81230/Documents/整理收纳app/docs/postgresql-schema.md)
-- [REST API 设计](C:/Users/81230/Documents/整理收纳app/docs/rest-api.md)
-- [MVP 路线图](C:/Users/81230/Documents/整理收纳app/docs/mvp-roadmap.md)
+- [系统架构](C:/Users/81230/Desktop/mika/Storage Helper/docs/architecture.md)
+- [数据库 ER 图](C:/Users/81230/Desktop/mika/Storage Helper/docs/database-er.md)
+- [PostgreSQL 表结构](C:/Users/81230/Desktop/mika/Storage Helper/docs/postgresql-schema.md)
+- [REST API 设计](C:/Users/81230/Desktop/mika/Storage Helper/docs/rest-api.md)
+- [MVP 路线图](C:/Users/81230/Desktop/mika/Storage Helper/docs/mvp-roadmap.md)
 
 ## GitHub 上传
 

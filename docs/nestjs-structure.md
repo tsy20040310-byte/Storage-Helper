@@ -30,8 +30,9 @@ apps/api/src/
 
 ## 下一步建议
 
-- 接入 ORM：推荐 Prisma
-- 增加 JWT 鉴权与 RBAC
+- Prisma 已接入，schema 位于 `apps/api/prisma/schema.prisma`
+- JWT 登录和 Bearer Token 鉴权已接入核心订单/认证接口
+- 后续增加 RBAC 角色守卫
 - Redis 短信验证码与限流
 - 文件上传签名接口
 - WebSocket 聊天

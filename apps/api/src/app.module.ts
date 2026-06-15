@@ -10,6 +10,7 @@ import { PaymentsModule } from "./modules/payments/payments.module";
 import { ReviewsModule } from "./modules/reviews/reviews.module";
 import { AdminModule } from "./modules/admin/admin.module";
 import { DisputesModule } from "./modules/disputes/disputes.module";
+import { PrismaModule } from "./database/prisma.module";
 
 @Module({
   imports: [
@@ -17,6 +18,7 @@ import { DisputesModule } from "./modules/disputes/disputes.module";
       isGlobal: true,
       envFilePath: "../../.env"
     }),
+    PrismaModule,
     AuthModule,
     OrdersModule,
     VerificationsModule,

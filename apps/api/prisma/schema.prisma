@@ -1,0 +1,221 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  client
+  organizer
+  admin
+}
+
+enum UserStatus {
+  active
+  disabled
+  banned
+}
+
+enum Gender {
+  male
+  female
+  other
+}
+
+enum VerificationStatus {
+  unverified
+  pending
+  approved
+  rejected
+}
+
+enum OrderStatus {
+  draft
+  published
+  applied
+  awaiting_client_confirmation
+  locked
+  in_service
+  awaiting_completion_confirmation
+  completed
+  cancelled
+  disputed
+}
+
+enum StorageSupplyStatus {
+  owned
+  need_organizer_prepare
+  unknown
+}
+
+enum MediaType {
+  image
+  video
+}
+
+enum ApplicationStatus {
+  pending
+  accepted
+  rejected
+  withdrawn
+}
+
+enum SessionVerificationStatus {
+  pending
+  gps_verified
+  pin_verified
+  started
+  failed
+}
+
+model User {
+  id          String     @id @default(uuid()) @db.Uuid
+  role        UserRole
+  phone       String     @unique @db.VarChar(20)
+  email       String?    @db.VarChar(120)
+  status      UserStatus @default(active)
+  trustScore  Int        @default(100) @map("trust_score")
+  trustLevel  String     @default("A+") @map("trust_level") @db.VarChar(4)
+  createdAt   DateTime   @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime   @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  profile               UserProfile?
+  identityVerifications IdentityVerification[]
+  clientOrders          Order[]                @relation("ClientOrders")
+  organizerOrders       Order[]                @relation("OrganizerOrders")
+  orderApplications     OrderApplication[]
+  serviceProfile        ServiceProfile?
+
+  @@map("users")
+}
+
+model UserProfile {
+  userId    String  @id @map("user_id") @db.Uuid
+  nickname  String? @db.VarChar(60)
+  avatarUrl String? @map("avatar_url")
+  realName  String? @map("real_name") @db.VarChar(50)
+  gender    Gender?
+  cityCode  String? @map("city_code") @db.VarChar(20)
+  bio       String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_profiles")
+}
+
+model IdentityVerification {
+  id           String             @id @default(uuid()) @db.Uuid
+  userId       String             @map("user_id") @db.Uuid
+  fullName     String             @map("full_name") @db.VarChar(50)
+  idNumber     String             @map("id_number") @db.VarChar(32)
+  phone        String             @db.VarChar(20)
+  gender       Gender
+  reviewStatus VerificationStatus @default(pending) @map("review_status")
+  reviewNote   String?            @map("review_note")
+  submittedAt  DateTime           @default(now()) @map("submitted_at") @db.Timestamptz(6)
+  reviewedAt   DateTime?          @map("reviewed_at") @db.Timestamptz(6)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, reviewStatus])
+  @@map("identity_verifications")
+}
+
+model ServiceProfile {
+  id              String             @id @default(uuid()) @db.Uuid
+  userId          String             @unique @map("user_id") @db.Uuid
+  serviceCityCode String             @map("service_city_code") @db.VarChar(20)
+  yearsExperience Int                @default(0) @map("years_experience")
+  intro           String?
+  approvalStatus  VerificationStatus @default(pending) @map("approval_status")
+  createdAt       DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime           @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("service_profiles")
+}
+
+model Order {
+  id                       String              @id @default(uuid()) @db.Uuid
+  clientUserId             String              @map("client_user_id") @db.Uuid
+  organizerUserId          String?             @map("organizer_user_id") @db.Uuid
+  title                    String              @db.VarChar(120)
+  description              String
+  cityCode                 String              @map("city_code") @db.VarChar(20)
+  district                 String?             @db.VarChar(50)
+  addressLine              String              @map("address_line") @db.VarChar(255)
+  floor                    String?             @db.VarChar(20)
+  hasElevator              Boolean             @default(false) @map("has_elevator")
+  scheduledStartAt         DateTime            @map("scheduled_start_at") @db.Timestamptz(6)
+  estimatedDurationMinutes Int                 @map("estimated_duration_minutes")
+  storageSupplyStatus      StorageSupplyStatus @map("storage_supply_status")
+  specialNotes             String?             @map("special_notes")
+  sameGenderOnly           Boolean             @default(false) @map("same_gender_only")
+  startPinCode             String              @map("start_pin_code") @db.VarChar(6)
+  arrivalRadiusMeters      Int                 @default(50) @map("arrival_radius_meters")
+  latitude                 Decimal             @db.Decimal(10, 7)
+  longitude                Decimal             @db.Decimal(10, 7)
+  status                   OrderStatus         @default(published)
+  createdAt                DateTime            @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt                DateTime            @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  client       User               @relation("ClientOrders", fields: [clientUserId], references: [id])
+  organizer    User?              @relation("OrganizerOrders", fields: [organizerUserId], references: [id])
+  media        OrderMedia[]
+  applications OrderApplication[]
+  session      ServiceSession?
+
+  @@index([clientUserId, status])
+  @@index([organizerUserId, status])
+  @@index([scheduledStartAt])
+  @@map("orders")
+}
+
+model OrderMedia {
+  id        String    @id @default(uuid()) @db.Uuid
+  orderId   String    @map("order_id") @db.Uuid
+  mediaType MediaType @map("media_type")
+  url       String
+  sortOrder Int       @default(0) @map("sort_order")
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@map("order_media")
+}
+
+model OrderApplication {
+  id              String            @id @default(uuid()) @db.Uuid
+  orderId         String            @map("order_id") @db.Uuid
+  organizerUserId String            @map("organizer_user_id") @db.Uuid
+  message         String?
+  quotedPrice     Decimal?          @map("quoted_price") @db.Decimal(12, 2)
+  status          ApplicationStatus @default(pending)
+  createdAt       DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  order     Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  organizer User  @relation(fields: [organizerUserId], references: [id])
+
+  @@unique([orderId, organizerUserId])
+  @@index([orderId, status])
+  @@map("order_applications")
+}
+
+model ServiceSession {
+  id                      String                    @id @default(uuid()) @db.Uuid
+  orderId                 String                    @unique @map("order_id") @db.Uuid
+  startedAt               DateTime?                 @map("started_at") @db.Timestamptz(6)
+  endedAt                 DateTime?                 @map("ended_at") @db.Timestamptz(6)
+  startVerificationStatus SessionVerificationStatus @default(pending) @map("start_verification_status")
+  actualDurationMinutes   Int?                      @map("actual_duration_minutes")
+  createdAt               DateTime                  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt               DateTime                  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@map("service_sessions")
+}

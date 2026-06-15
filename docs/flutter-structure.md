@@ -1,44 +1,36 @@
 # Flutter 移动端项目结构
 
-当前已提供业务骨架入口，推荐扩展为：
+当前已落地基础分层：
 
 ```text
 lib/
   main.dart
   app/
-    app.dart
-    router.dart
-    theme.dart
+    storage_helper_app.dart
   core/
-    network/
-    auth/
-    storage/
-    location/
+    api/
+    state/
   features/
     auth/
     verification/
     orders/
-    organizer/
-    chat/
-    payment/
+    home/
     profile/
-    support/
   shared/
     widgets/
-    models/
-    utils/
 ```
 
-## 首批页面建议
+## 已接流程
 
 - 登录/验证码页
 - 实名认证页
-- 首页
 - 发布订单页
-- 订单详情页
-- 接单大厅页
+- 订单列表页
+- 个人中心页
+
+## 待接流程
+
+- 素材对象存储直传
+- 接单大厅
 - 到达验证/开工页
-- 聊天页
-- 支付页
-- 评价页
-- 客服维权页
+- 聊天、支付、评价、客服维权

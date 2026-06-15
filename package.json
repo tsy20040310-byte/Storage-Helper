@@ -10,6 +10,8 @@
   "scripts": {
     "dev:api": "npm --workspace apps/api run start:dev",
     "dev:admin": "npm --workspace apps/admin run dev",
+    "api:prisma:generate": "npm --workspace apps/api run prisma:generate",
+    "api:db:push": "npm --workspace apps/api run db:push",
     "build": "npm run build --workspaces",
     "lint": "npm run lint --workspaces",
     "test": "npm run test --workspaces"

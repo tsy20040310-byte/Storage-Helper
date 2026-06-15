@@ -1,4 +1,6 @@
-import { Body, Controller, Get, Param, Patch, Post } from "@nestjs/common";
+import { Body, Controller, Get, Param, Patch, Post, UseGuards } from "@nestjs/common";
+import { CurrentUser, AuthenticatedUser } from "../../common/current-user.decorator";
+import { JwtAuthGuard } from "../../common/jwt-auth.guard";
 import { ok } from "../../common/api-response";
 import { OrdersService } from "./orders.service";
 import {
@@ -11,17 +13,18 @@ import {
 } from "./dto/orders.dto";
 
 @Controller("orders")
+@UseGuards(JwtAuthGuard)
 export class OrdersController {
   constructor(private readonly ordersService: OrdersService) {}
 
   @Post()
-  create(@Body() dto: CreateOrderDto) {
-    return ok(this.ordersService.create(dto));
+  create(@CurrentUser() user: AuthenticatedUser, @Body() dto: CreateOrderDto) {
+    return ok(this.ordersService.create(user.sub, dto));
   }
 
   @Get()
-  list() {
-    return ok(this.ordersService.list());
+  list(@CurrentUser() user: AuthenticatedUser) {
+    return ok(this.ordersService.list(user));
   }
 
   @Get(":id")
@@ -30,8 +33,8 @@ export class OrdersController {
   }
 
   @Post(":id/applications")
-  apply(@Param("id") id: string, @Body() dto: ApplyOrderDto) {
-    return ok(this.ordersService.apply(id, dto));
+  apply(@CurrentUser() user: AuthenticatedUser, @Param("id") id: string, @Body() dto: ApplyOrderDto) {
+    return ok(this.ordersService.apply(user.sub, id, dto));
   }
 
   @Patch(":id/applications/:applicationId/confirm")
