@@ -22,7 +22,7 @@
 ## 技术选型
 
 - Mobile: Flutter
-- API: NestJS + PostgreSQL + Redis
+- API: NestJS + MySQL + Redis
 - Admin: React + Vite
 - Storage: S3 / OSS 抽象
 - Map: 高德地图优先，Google Maps 作为国际化扩展
@@ -51,9 +51,10 @@ npm.cmd install
 ### 4. 启动后端
 
 ```bash
+npm run infra:up
 npm run api:prisma:generate
 npm run api:db:push
-npm run dev:api
+npm run dev-api
 ```
 
 ### 5. 启动管理后台
@@ -84,7 +85,7 @@ flutter run
 
 ## 后端数据库
 
-后端已接入 Prisma + PostgreSQL。首次启动数据库后执行：
+后端已切换为 Prisma + MySQL，默认独立数据库名为 `storage_helper`，不会使用你的 `qi_platform`。首次启动数据库后执行：
 
 ```bash
 npm run api:prisma:generate

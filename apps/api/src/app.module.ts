@@ -11,12 +11,16 @@ import { ReviewsModule } from "./modules/reviews/reviews.module";
 import { AdminModule } from "./modules/admin/admin.module";
 import { DisputesModule } from "./modules/disputes/disputes.module";
 import { PrismaModule } from "./database/prisma.module";
+import { PortfoliosModule } from "./modules/portfolios/portfolios.module";
+import { OrganizerProfileModule } from "./modules/organizer-profile/organizer-profile.module";
+import { ServiceContractsModule } from "./modules/service-contracts/service-contracts.module";
+import { EmergencyContactsModule } from "./modules/emergency-contacts/emergency-contacts.module";
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: "../../.env"
+      envFilePath: ["apps/api/.env", ".env"]
     }),
     PrismaModule,
     AuthModule,
@@ -25,6 +29,10 @@ import { PrismaModule } from "./database/prisma.module";
     ChatsModule,
     PaymentsModule,
     ReviewsModule,
+    PortfoliosModule,
+    OrganizerProfileModule,
+    ServiceContractsModule,
+    EmergencyContactsModule,
     AdminModule,
     DisputesModule
   ],

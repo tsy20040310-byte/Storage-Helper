@@ -1,4 +1,4 @@
-import { IsIn, IsMobilePhone, IsOptional, IsString, Length } from "class-validator";
+import { IsIn, IsMobilePhone, IsOptional, IsString, Length, MinLength } from "class-validator";
 
 export class SendCodeDto {
   @IsMobilePhone("zh-CN")
@@ -16,4 +16,31 @@ export class LoginDto {
   @IsOptional()
   @IsIn(["client", "organizer", "admin"])
   role?: "client" | "organizer" | "admin";
+}
+
+export class RegisterDto {
+  @IsMobilePhone("zh-CN")
+  phone!: string;
+
+  @IsString()
+  @MinLength(6)
+  password!: string;
+
+  @IsOptional()
+  @IsString()
+  @Length(2, 60)
+  nickname?: string;
+
+  @IsOptional()
+  @IsIn(["client", "organizer", "admin"])
+  role?: "client" | "organizer" | "admin";
+}
+
+export class PasswordLoginDto {
+  @IsMobilePhone("zh-CN")
+  phone!: string;
+
+  @IsString()
+  @MinLength(6)
+  password!: string;
 }

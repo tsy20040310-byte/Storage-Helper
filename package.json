@@ -8,7 +8,11 @@
     "packages/contracts"
   ],
   "scripts": {
+    "infra:up": "docker compose -f infra/docker-compose.yml up -d",
+    "dev-api": "npm --workspace apps/api run start:dev",
     "dev:api": "npm --workspace apps/api run start:dev",
+    "dev-admin": "npm --workspace apps/admin run dev",
+    "dev": "npm run dev-api & npm run dev-admin",
     "dev:admin": "npm --workspace apps/admin run dev",
     "api:prisma:generate": "npm --workspace apps/api run prisma:generate",
     "api:db:push": "npm --workspace apps/api run db:push",

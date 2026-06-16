@@ -1,0 +1,6 @@
+export type ReputationLevel =
+  | "Lv1 \u65b0\u4eba\u6574\u7406\u5e08"
+  | "Lv2 \u8ba4\u8bc1\u6574\u7406\u5e08"
+  | "Lv3 \u4f18\u79c0\u6574\u7406\u5e08"
+  | "Lv4 \u91d1\u724c\u6574\u7406\u5e08"
+  | "Lv5 \u4e13\u5bb6\u6574\u7406\u5e08";

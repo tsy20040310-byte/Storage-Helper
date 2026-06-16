@@ -12,28 +12,38 @@ class CreateOrderPage extends StatefulWidget {
 }
 
 class _CreateOrderPageState extends State<CreateOrderPage> {
-  final titleController = TextEditingController(text: '整理衣柜和儿童玩具');
-  final descriptionController = TextEditingController(text: '衣柜需要分类整理，儿童玩具需要收纳分区。');
-  final addressController = TextEditingController(text: '北京市朝阳区示例地址');
+  final titleController = TextEditingController(text: 'Family storage reset');
+  final descriptionController = TextEditingController(text: 'Need help with wardrobe, toys, and entryway storage.');
+  final addressController = TextEditingController(text: 'Chaoyang District, Beijing');
+  String genderPreference = 'no_preference';
   String? success;
 
   @override
   Widget build(BuildContext context) {
     return AppScaffold(
-      title: '发布整理需求',
+      title: 'Create Order',
+      subtitle: 'Publish a storage order and optionally restrict applications to female organizers only.',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          TextField(controller: titleController, decoration: const InputDecoration(labelText: '标题')),
+          TextField(controller: titleController, decoration: const InputDecoration(labelText: 'Title')),
           TextField(
             controller: descriptionController,
             minLines: 3,
             maxLines: 5,
-            decoration: const InputDecoration(labelText: '需求描述'),
+            decoration: const InputDecoration(labelText: 'Description'),
           ),
-          TextField(controller: addressController, decoration: const InputDecoration(labelText: '详细地址')),
+          TextField(controller: addressController, decoration: const InputDecoration(labelText: 'Address')),
           const SizedBox(height: 12),
-          const Text('素材上传 MVP 暂用示例图片 URL，正式版本接对象存储直传。'),
+          DropdownButtonFormField<String>(
+            value: genderPreference,
+            items: const [
+              DropdownMenuItem(value: 'no_preference', child: Text('No preference')),
+              DropdownMenuItem(value: 'female_only', child: Text('Female organizers only')),
+            ],
+            onChanged: (value) => setState(() => genderPreference = value ?? 'no_preference'),
+            decoration: const InputDecoration(labelText: 'Safety preference'),
+          ),
           const SizedBox(height: 24),
           FilledButton(
             onPressed: widget.appState.loading
@@ -45,10 +55,11 @@ class _CreateOrderPageState extends State<CreateOrderPage> {
                       description: descriptionController.text,
                       address: addressController.text,
                       scheduledStartAt: date,
+                      genderPreference: genderPreference,
                     );
-                    setState(() => success = '订单已发布');
+                    setState(() => success = 'Order created.');
                   },
-            child: const Text('发布订单'),
+            child: const Text('Create Order'),
           ),
           if (success != null) SuccessText(success!),
           if (widget.appState.error != null) ErrorText(widget.appState.error!),

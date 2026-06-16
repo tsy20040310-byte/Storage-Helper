@@ -22,6 +22,7 @@ class _IdentityVerificationPageState extends State<IdentityVerificationPage> {
   Widget build(BuildContext context) {
     return AppScaffold(
       title: '实名认证',
+      subtitle: '提交真实姓名、身份证号、手机号和性别后进入审核流程。',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [

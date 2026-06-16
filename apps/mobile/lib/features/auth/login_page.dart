@@ -20,6 +20,7 @@ class _LoginPageState extends State<LoginPage> {
   Widget build(BuildContext context) {
     return AppScaffold(
       title: '收纳帮登录',
+      subtitle: '输入手机号和验证码后进入系统。当前开发环境默认验证码为 123456。',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -44,6 +45,19 @@ class _LoginPageState extends State<LoginPage> {
             onChanged: (value) => setState(() => role = value ?? 'client'),
           ),
           const SizedBox(height: 24),
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF8FAFC),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: const Color(0xFFE2E8F0)),
+            ),
+            child: const Text(
+              '默认账号\n单主：13800000000\n整理师：13900000000',
+              style: TextStyle(height: 1.7, color: Color(0xFF475569)),
+            ),
+          ),
+          const SizedBox(height: 20),
           FilledButton(
             onPressed: widget.appState.loading
                 ? null

@@ -3,7 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "mysql"
   url      = env("DATABASE_URL")
 }
 
@@ -36,6 +36,7 @@ enum OrderStatus {
   draft
   published
   applied
+  candidate_pool_full
   awaiting_client_confirmation
   locked
   in_service
@@ -63,6 +64,95 @@ enum ApplicationStatus {
   withdrawn
 }
 
+enum ReviewRole {
+  client_to_organizer
+  organizer_to_client
+}
+
+enum PortfolioItemStatus {
+  draft
+  published
+  archived
+}
+
+enum CaseStudyStatus {
+  draft
+  published
+  archived
+}
+
+enum ReviewMediaType {
+  image
+  video
+}
+
+enum OrganizerProfileTagType {
+  style
+  service
+  badge
+}
+
+enum PortfolioMediaStage {
+  before
+  after
+}
+
+enum CaseStudyMediaStage {
+  before
+  after
+}
+
+enum PaymentStatus {
+  pending
+  paid
+  escrowed
+  released
+  refunded
+}
+
+enum EscrowStatus {
+  holding
+  released
+  refunded
+}
+
+enum TransactionType {
+  payment
+  escrow
+  release
+  refund
+  commission
+  deposit_deduction
+  deposit_refund
+  breach_compensation
+}
+
+enum RefundStatus {
+  pending
+  approved
+  rejected
+  completed
+}
+
+enum BreachType {
+  client_cancel_late
+  client_no_show
+  organizer_no_show
+  organizer_late
+  organizer_cancel_late
+}
+
+enum BreachStatus {
+  pending
+  processed
+  waived
+}
+
+enum OrganizerDepositStatus {
+  active
+  depleted
+}
+
 enum SessionVerificationStatus {
   pending
   gps_verified
@@ -71,16 +161,53 @@ enum SessionVerificationStatus {
   failed
 }
 
+enum GenderPreference {
+  female_only
+  no_preference
+}
+
+enum SosStatus {
+  new
+  processing
+  resolved
+}
+
+enum DisputeStatus {
+  open
+  in_review
+  resolved
+  rejected
+}
+
+enum DisputeResolutionType {
+  complaint_upheld
+  harassment
+  severe_violation
+  no_fault
+  settlement
+}
+
+enum DisputeEvidenceType {
+  image
+  video
+  file
+}
+
 model User {
-  id          String     @id @default(uuid()) @db.Uuid
+  id          String     @id @default(uuid())
   role        UserRole
   phone       String     @unique @db.VarChar(20)
   email       String?    @db.VarChar(120)
+  passwordHash String    @default("") @map("password_hash") @db.VarChar(255)
   status      UserStatus @default(active)
   trustScore  Int        @default(100) @map("trust_score")
   trustLevel  String     @default("A+") @map("trust_level") @db.VarChar(4)
-  createdAt   DateTime   @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt   DateTime   @updatedAt @map("updated_at") @db.Timestamptz(6)
+  reputationScore Int    @default(0) @map("reputation_score")
+  reputationLevel String @default("Lv1 新人整理师") @map("reputation_level") @db.VarChar(20)
+  safetyScore Int        @default(100) @map("safety_score")
+  deletedAt   DateTime?  @map("deleted_at")
+  createdAt   DateTime   @default(now()) @map("created_at")
+  updatedAt   DateTime   @updatedAt @map("updated_at")
 
   profile               UserProfile?
   identityVerifications IdentityVerification[]
@@ -88,18 +215,37 @@ model User {
   organizerOrders       Order[]                @relation("OrganizerOrders")
   orderApplications     OrderApplication[]
   serviceProfile        ServiceProfile?
+  organizerProfile      OrganizerProfile?
+  organizerDeposits     OrganizerDeposit[]
+  portfolioItems        PortfolioItem[]
+  caseStudies           CaseStudy[]
+  reviewsWritten        OrderReview[]          @relation("WrittenReviews")
+  reviewsReceived       OrderReview[]          @relation("ReceivedReviews")
+  reviewFollowups       ReviewFollowup[]
+  payments              Payment[]
+  refunds               Refund[]
+  transactions          Transaction[]
+  breachRecords         BreachRecord[]
+  emergencyContacts     EmergencyContact[]
+  sosEventsTriggered    SosEvent[]             @relation("SosTriggeredBy")
+  sosEventsAsOrganizer  SosEvent[]             @relation("SosOrganizer")
+  disputesInitiated     Dispute[]              @relation("DisputeInitiator")
+  disputesResponded     Dispute[]              @relation("DisputeRespondent")
+  disputeMessages       DisputeMessage[]
+  disputeEvidences      DisputeEvidence[]
+  auditLogs             AuditLog[]
 
   @@map("users")
 }
 
 model UserProfile {
-  userId    String  @id @map("user_id") @db.Uuid
+  userId    String  @id @map("user_id")
   nickname  String? @db.VarChar(60)
-  avatarUrl String? @map("avatar_url")
+  avatarUrl String? @map("avatar_url") @db.Text
   realName  String? @map("real_name") @db.VarChar(50)
   gender    Gender?
   cityCode  String? @map("city_code") @db.VarChar(20)
-  bio       String?
+  bio       String? @db.Text
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -107,16 +253,16 @@ model UserProfile {
 }
 
 model IdentityVerification {
-  id           String             @id @default(uuid()) @db.Uuid
-  userId       String             @map("user_id") @db.Uuid
+  id           String             @id @default(uuid())
+  userId       String             @map("user_id")
   fullName     String             @map("full_name") @db.VarChar(50)
   idNumber     String             @map("id_number") @db.VarChar(32)
   phone        String             @db.VarChar(20)
   gender       Gender
   reviewStatus VerificationStatus @default(pending) @map("review_status")
-  reviewNote   String?            @map("review_note")
-  submittedAt  DateTime           @default(now()) @map("submitted_at") @db.Timestamptz(6)
-  reviewedAt   DateTime?          @map("reviewed_at") @db.Timestamptz(6)
+  reviewNote   String?            @map("review_note") @db.Text
+  submittedAt  DateTime           @default(now()) @map("submitted_at")
+  reviewedAt   DateTime?          @map("reviewed_at")
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -125,49 +271,97 @@ model IdentityVerification {
 }
 
 model ServiceProfile {
-  id              String             @id @default(uuid()) @db.Uuid
-  userId          String             @unique @map("user_id") @db.Uuid
+  id              String             @id @default(uuid())
+  userId          String             @unique @map("user_id")
   serviceCityCode String             @map("service_city_code") @db.VarChar(20)
   yearsExperience Int                @default(0) @map("years_experience")
-  intro           String?
+  intro           String?            @db.Text
   approvalStatus  VerificationStatus @default(pending) @map("approval_status")
-  createdAt       DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt       DateTime           @updatedAt @map("updated_at") @db.Timestamptz(6)
+  createdAt       DateTime           @default(now()) @map("created_at")
+  updatedAt       DateTime           @updatedAt @map("updated_at")
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("service_profiles")
 }
 
+model OrganizerProfile {
+  id                     String   @id @default(uuid())
+  userId                 String   @unique @map("user_id")
+  displayName            String?  @map("display_name") @db.VarChar(80)
+  headline               String?  @db.VarChar(160)
+  servicePromiseText     String?  @map("service_promise_text") @db.Text
+  responseRate           Int      @default(0) @map("response_rate")
+  completedOrdersCount   Int      @default(0) @map("completed_orders_count")
+  featuredPortfolioId    String?  @map("featured_portfolio_id")
+  featuredCaseStudyId    String?  @map("featured_case_study_id")
+  createdAt              DateTime @default(now()) @map("created_at")
+  updatedAt              DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tags OrganizerProfileTag[]
+
+  @@map("organizer_profiles")
+}
+
+model OrganizerProfileTag {
+  id                 String                  @id @default(uuid())
+  organizerProfileId String                  @map("organizer_profile_id")
+  tagType            OrganizerProfileTagType @map("tag_type")
+  tagValue           String                  @map("tag_value") @db.VarChar(60)
+  sortOrder          Int                     @default(0) @map("sort_order")
+  createdAt          DateTime                @default(now()) @map("created_at")
+
+  organizerProfile OrganizerProfile @relation(fields: [organizerProfileId], references: [id], onDelete: Cascade)
+
+  @@index([organizerProfileId, tagType, sortOrder])
+  @@unique([organizerProfileId, tagType, tagValue])
+  @@map("organizer_profile_tags")
+}
+
 model Order {
-  id                       String              @id @default(uuid()) @db.Uuid
-  clientUserId             String              @map("client_user_id") @db.Uuid
-  organizerUserId          String?             @map("organizer_user_id") @db.Uuid
+  id                       String              @id @default(uuid())
+  clientUserId             String              @map("client_user_id")
+  organizerUserId          String?             @map("organizer_user_id")
   title                    String              @db.VarChar(120)
-  description              String
+  description              String              @db.Text
   cityCode                 String              @map("city_code") @db.VarChar(20)
   district                 String?             @db.VarChar(50)
   addressLine              String              @map("address_line") @db.VarChar(255)
   floor                    String?             @db.VarChar(20)
   hasElevator              Boolean             @default(false) @map("has_elevator")
-  scheduledStartAt         DateTime            @map("scheduled_start_at") @db.Timestamptz(6)
+  scheduledStartAt         DateTime            @map("scheduled_start_at")
   estimatedDurationMinutes Int                 @map("estimated_duration_minutes")
   storageSupplyStatus      StorageSupplyStatus @map("storage_supply_status")
-  specialNotes             String?             @map("special_notes")
+  specialNotes             String?             @map("special_notes") @db.Text
   sameGenderOnly           Boolean             @default(false) @map("same_gender_only")
+  genderPreference         GenderPreference    @default(no_preference) @map("gender_preference")
   startPinCode             String              @map("start_pin_code") @db.VarChar(6)
   arrivalRadiusMeters      Int                 @default(50) @map("arrival_radius_meters")
   latitude                 Decimal             @db.Decimal(10, 7)
   longitude                Decimal             @db.Decimal(10, 7)
+  shareToken               String?             @unique @map("share_token") @db.VarChar(64)
+  candidatePoolExpiresAt   DateTime?           @map("candidate_pool_expires_at")
+  completionConfirmedAt    DateTime?           @map("completion_confirmed_at")
+  cancelledAt              DateTime?           @map("cancelled_at")
   status                   OrderStatus         @default(published)
-  createdAt                DateTime            @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt                DateTime            @updatedAt @map("updated_at") @db.Timestamptz(6)
+  createdAt                DateTime            @default(now()) @map("created_at")
+  updatedAt                DateTime            @updatedAt @map("updated_at")
 
   client       User               @relation("ClientOrders", fields: [clientUserId], references: [id])
   organizer    User?              @relation("OrganizerOrders", fields: [organizerUserId], references: [id])
   media        OrderMedia[]
   applications OrderApplication[]
   session      ServiceSession?
+  reviews      OrderReview[]
+  serviceContract ServiceContract?
+  payments     Payment[]
+  escrowAccount EscrowAccount?
+  refunds      Refund[]
+  transactions Transaction[]
+  breachRecords BreachRecord[]
+  sosEvents    SosEvent[]
+  disputes     Dispute[]
 
   @@index([clientUserId, status])
   @@index([organizerUserId, status])
@@ -175,13 +369,273 @@ model Order {
   @@map("orders")
 }
 
+model ServiceContract {
+  id               String   @id @default(uuid())
+  orderId          String   @unique @map("order_id")
+  clientId         String   @map("client_id")
+  organizerId      String   @map("organizer_id")
+  serviceDate      DateTime @map("service_date")
+  serviceAddress   String   @map("service_address") @db.VarChar(255)
+  serviceFee       Decimal  @map("service_fee") @db.Decimal(12, 2)
+  travelFee        Decimal  @map("travel_fee") @db.Decimal(12, 2)
+  platformFee      Decimal  @map("platform_fee") @db.Decimal(12, 2)
+  cancellationRule String   @map("cancellation_rule") @db.Text
+  breachRule       String   @map("breach_rule") @db.Text
+  contractSnapshot String   @map("contract_snapshot") @db.Text
+  signedAt         DateTime @map("signed_at")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([clientId, organizerId])
+  @@map("service_contracts")
+}
+
+model Payment {
+  id                    String        @id @default(uuid())
+  orderId               String        @map("order_id")
+  payerUserId           String        @map("payer_user_id")
+  amount                Decimal       @db.Decimal(12, 2)
+  status                PaymentStatus @default(pending)
+  provider              String        @db.VarChar(40)
+  providerTransactionId String?       @map("provider_transaction_id") @db.VarChar(120)
+  createdAt             DateTime      @default(now()) @map("created_at")
+  updatedAt             DateTime      @updatedAt @map("updated_at")
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  payer User @relation(fields: [payerUserId], references: [id], onDelete: Cascade)
+
+  @@index([orderId, status])
+  @@index([payerUserId, status])
+  @@map("payments")
+}
+
+model EscrowAccount {
+  id                String       @id @default(uuid())
+  orderId           String       @unique @map("order_id")
+  amount            Decimal      @db.Decimal(12, 2)
+  status            EscrowStatus @default(holding)
+  releaseEligibleAt DateTime?    @map("release_eligible_at")
+  createdAt         DateTime     @default(now()) @map("created_at")
+  releasedAt        DateTime?    @map("released_at")
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@map("escrow_accounts")
+}
+
+model Transaction {
+  id            String          @id @default(uuid())
+  userId        String          @map("user_id")
+  orderId       String?         @map("order_id")
+  type          TransactionType
+  amount        Decimal         @db.Decimal(12, 2)
+  balanceBefore Decimal        @map("balance_before") @db.Decimal(12, 2)
+  balanceAfter  Decimal        @map("balance_after") @db.Decimal(12, 2)
+  description   String         @db.Text
+  createdAt     DateTime       @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  order Order? @relation(fields: [orderId], references: [id], onDelete: SetNull)
+
+  @@index([userId, createdAt])
+  @@index([orderId, createdAt])
+  @@map("transactions")
+}
+
+model Refund {
+  id           String       @id @default(uuid())
+  orderId       String      @map("order_id")
+  requesterId   String      @map("requester_id")
+  reason       String       @db.Text
+  refundAmount Decimal      @map("refund_amount") @db.Decimal(12, 2)
+  status       RefundStatus @default(pending)
+  createdAt    DateTime     @default(now()) @map("created_at")
+  updatedAt    DateTime     @updatedAt @map("updated_at")
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  requester User @relation(fields: [requesterId], references: [id], onDelete: Cascade)
+
+  @@index([orderId, status])
+  @@map("refunds")
+}
+
+model BreachRecord {
+  id          String       @id @default(uuid())
+  orderId      String      @map("order_id")
+  userId       String      @map("user_id")
+  breachType  BreachType   @map("breach_type")
+  amount      Decimal      @db.Decimal(12, 2)
+  description String       @db.Text
+  status      BreachStatus @default(pending)
+  createdAt   DateTime     @default(now()) @map("created_at")
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([orderId, breachType])
+  @@map("breach_records")
+}
+
+model OrganizerDeposit {
+  id               String                 @id @default(uuid())
+  organizerUserId  String                 @map("organizer_user_id")
+  amount           Decimal                @db.Decimal(12, 2)
+  status           OrganizerDepositStatus @default(active)
+  createdAt        DateTime               @default(now()) @map("created_at")
+  updatedAt        DateTime               @updatedAt @map("updated_at")
+
+  organizer User @relation(fields: [organizerUserId], references: [id], onDelete: Cascade)
+
+  @@unique([organizerUserId])
+  @@map("organizer_deposits")
+}
+
+model OrderReview {
+  id             String     @id @default(uuid())
+  orderId        String     @map("order_id")
+  reviewerUserId String     @map("reviewer_user_id")
+  revieweeUserId String     @map("reviewee_user_id")
+  role           ReviewRole
+  overallRating  Int        @map("overall_rating")
+  professionalScore Int?    @map("professional_score")
+  communicationScore Int?   @map("communication_score")
+  punctualityScore Int?     @map("punctuality_score")
+  resultScore     Int?      @map("result_score")
+  content        String?    @db.Text
+  tagsJson       String?    @map("tags_json") @db.Text
+  deletedAt      DateTime?  @map("deleted_at")
+  createdAt      DateTime   @default(now()) @map("created_at")
+
+  order    Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  reviewer User  @relation("WrittenReviews", fields: [reviewerUserId], references: [id])
+  reviewee User  @relation("ReceivedReviews", fields: [revieweeUserId], references: [id])
+  media    ReviewMedia[]
+  followups ReviewFollowup[]
+
+  @@index([orderId])
+  @@index([revieweeUserId, role])
+  @@unique([orderId, reviewerUserId, role])
+  @@map("order_reviews")
+}
+
+model ReviewMedia {
+  id        String          @id @default(uuid())
+  reviewId   String         @map("review_id")
+  mediaType ReviewMediaType @map("media_type")
+  url       String          @db.Text
+  fileSize  Int?            @map("file_size")
+  sortOrder Int             @default(0) @map("sort_order")
+  createdAt DateTime        @default(now()) @map("created_at")
+
+  review OrderReview @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+
+  @@index([reviewId, sortOrder])
+  @@map("review_media")
+}
+
+model ReviewFollowup {
+  id           String   @id @default(uuid())
+  reviewId      String  @map("review_id")
+  authorUserId  String  @map("author_user_id")
+  content      String   @db.Text
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  review OrderReview @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  author User        @relation(fields: [authorUserId], references: [id], onDelete: Cascade)
+
+  @@index([reviewId, createdAt])
+  @@map("review_followups")
+}
+
+model PortfolioItem {
+  id              String              @id @default(uuid())
+  userId          String              @map("user_id")
+  title           String              @db.VarChar(120)
+  description     String              @db.Text
+  coverImageUrl   String?             @map("cover_image_url") @db.Text
+  roomType        String?             @map("room_type") @db.VarChar(60)
+  styleTagsText   String?             @map("style_tags_text") @db.Text
+  beforeSummary   String?             @map("before_summary") @db.Text
+  sortOrder       Int                 @default(0) @map("sort_order")
+  status          PortfolioItemStatus @default(published)
+  deletedAt       DateTime?           @map("deleted_at")
+  createdAt       DateTime            @default(now()) @map("created_at")
+  updatedAt       DateTime            @updatedAt @map("updated_at")
+
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  caseStudies CaseStudy[]
+  media       PortfolioMedia[]
+
+  @@index([userId, status])
+  @@map("portfolio_items")
+}
+
+model PortfolioMedia {
+  id              String              @id @default(uuid())
+  portfolioItemId String              @map("portfolio_item_id")
+  stage           PortfolioMediaStage
+  url             String              @db.Text
+  fileSize        Int?                @map("file_size")
+  sortOrder       Int                 @default(0) @map("sort_order")
+  createdAt       DateTime            @default(now()) @map("created_at")
+
+  portfolioItem PortfolioItem @relation(fields: [portfolioItemId], references: [id], onDelete: Cascade)
+
+  @@index([portfolioItemId, stage, sortOrder])
+  @@map("portfolio_media")
+}
+
+model CaseStudy {
+  id              String          @id @default(uuid())
+  portfolioId     String          @map("portfolio_id")
+  userId          String          @map("user_id")
+  title           String          @db.VarChar(120)
+  problemSummary  String          @map("problem_summary") @db.Text
+  solutionSummary String          @map("solution_summary") @db.Text
+  resultSummary   String?         @map("result_summary") @db.Text
+  coverImageUrl   String?         @map("cover_image_url") @db.Text
+  likesCount      Int             @default(0) @map("likes_count")
+  favoritesCount  Int             @default(0) @map("favorites_count")
+  viewsCount      Int             @default(0) @map("views_count")
+  isFeatured      Boolean         @default(false) @map("is_featured")
+  status          CaseStudyStatus @default(published)
+  deletedAt       DateTime?       @map("deleted_at")
+  createdAt       DateTime        @default(now()) @map("created_at")
+  updatedAt       DateTime        @updatedAt @map("updated_at")
+
+  portfolioItem PortfolioItem @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
+  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  media         CaseStudyMedia[]
+
+  @@index([portfolioId, status])
+  @@index([userId, status])
+  @@map("case_studies")
+}
+
+model CaseStudyMedia {
+  id          String             @id @default(uuid())
+  caseStudyId String             @map("case_study_id")
+  stage       CaseStudyMediaStage
+  url         String             @db.Text
+  fileSize    Int?               @map("file_size")
+  sortOrder   Int                @default(0) @map("sort_order")
+  createdAt   DateTime           @default(now()) @map("created_at")
+
+  caseStudy CaseStudy @relation(fields: [caseStudyId], references: [id], onDelete: Cascade)
+
+  @@index([caseStudyId, stage, sortOrder])
+  @@map("case_study_media")
+}
+
 model OrderMedia {
-  id        String    @id @default(uuid()) @db.Uuid
-  orderId   String    @map("order_id") @db.Uuid
+  id        String    @id @default(uuid())
+  orderId   String    @map("order_id")
   mediaType MediaType @map("media_type")
-  url       String
+  url       String    @db.Text
   sortOrder Int       @default(0) @map("sort_order")
-  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  createdAt DateTime  @default(now()) @map("created_at")
 
   order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
 
@@ -189,13 +643,13 @@ model OrderMedia {
 }
 
 model OrderApplication {
-  id              String            @id @default(uuid()) @db.Uuid
-  orderId         String            @map("order_id") @db.Uuid
-  organizerUserId String            @map("organizer_user_id") @db.Uuid
-  message         String?
+  id              String            @id @default(uuid())
+  orderId         String            @map("order_id")
+  organizerUserId String            @map("organizer_user_id")
+  message         String?           @db.Text
   quotedPrice     Decimal?          @map("quoted_price") @db.Decimal(12, 2)
   status          ApplicationStatus @default(pending)
-  createdAt       DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+  createdAt       DateTime          @default(now()) @map("created_at")
 
   order     Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
   organizer User  @relation(fields: [organizerUserId], references: [id])
@@ -206,16 +660,125 @@ model OrderApplication {
 }
 
 model ServiceSession {
-  id                      String                    @id @default(uuid()) @db.Uuid
-  orderId                 String                    @unique @map("order_id") @db.Uuid
-  startedAt               DateTime?                 @map("started_at") @db.Timestamptz(6)
-  endedAt                 DateTime?                 @map("ended_at") @db.Timestamptz(6)
+  id                      String                    @id @default(uuid())
+  orderId                 String                    @unique @map("order_id")
+  startedAt               DateTime?                 @map("started_at")
+  endedAt                 DateTime?                 @map("ended_at")
   startVerificationStatus SessionVerificationStatus @default(pending) @map("start_verification_status")
   actualDurationMinutes   Int?                      @map("actual_duration_minutes")
-  createdAt               DateTime                  @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt               DateTime                  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  createdAt               DateTime                  @default(now()) @map("created_at")
+  updatedAt               DateTime                  @updatedAt @map("updated_at")
 
   order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
 
   @@map("service_sessions")
+}
+
+model EmergencyContact {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  name      String   @db.VarChar(60)
+  phone     String   @db.VarChar(20)
+  relation  String   @db.VarChar(60)
+  deletedAt DateTime? @map("deleted_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@map("emergency_contacts")
+}
+
+model SosEvent {
+  id          String    @id @default(uuid())
+  orderId      String   @map("order_id")
+  userId       String   @map("user_id")
+  organizerId  String?  @map("organizer_id")
+  latitude     Decimal  @db.Decimal(10, 7)
+  longitude    Decimal  @db.Decimal(10, 7)
+  status       SosStatus @default(new)
+  description  String?  @db.Text
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  order     Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  user      User  @relation("SosTriggeredBy", fields: [userId], references: [id], onDelete: Cascade)
+  organizer User? @relation("SosOrganizer", fields: [organizerId], references: [id], onDelete: SetNull)
+
+  @@index([orderId, status])
+  @@index([userId, createdAt])
+  @@map("sos_events")
+}
+
+model Dispute {
+  id               String                 @id @default(uuid())
+  orderId          String                 @map("order_id")
+  initiatorUserId  String                 @map("initiator_user_id")
+  respondentUserId String?                @map("respondent_user_id")
+  subject          String                 @db.VarChar(120)
+  description      String                 @db.Text
+  status           DisputeStatus          @default(open)
+  resolutionType   DisputeResolutionType? @map("resolution_type")
+  resolutionNote   String?                @map("resolution_note") @db.Text
+  deletedAt        DateTime?              @map("deleted_at")
+  createdAt        DateTime               @default(now()) @map("created_at")
+  updatedAt        DateTime               @updatedAt @map("updated_at")
+  resolvedAt       DateTime?              @map("resolved_at")
+
+  order      Order             @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  initiator  User              @relation("DisputeInitiator", fields: [initiatorUserId], references: [id], onDelete: Cascade)
+  respondent User?             @relation("DisputeRespondent", fields: [respondentUserId], references: [id], onDelete: SetNull)
+  messages   DisputeMessage[]
+  evidences  DisputeEvidence[]
+
+  @@index([orderId, status])
+  @@index([initiatorUserId, createdAt])
+  @@map("disputes")
+}
+
+model DisputeMessage {
+  id           String   @id @default(uuid())
+  disputeId     String  @map("dispute_id")
+  senderUserId  String  @map("sender_user_id")
+  message      String   @db.Text
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  dispute Dispute @relation(fields: [disputeId], references: [id], onDelete: Cascade)
+  sender  User    @relation(fields: [senderUserId], references: [id], onDelete: Cascade)
+
+  @@index([disputeId, createdAt])
+  @@map("dispute_messages")
+}
+
+model DisputeEvidence {
+  id             String              @id @default(uuid())
+  disputeId      String              @map("dispute_id")
+  uploaderUserId String              @map("uploader_user_id")
+  evidenceType   DisputeEvidenceType @map("evidence_type")
+  url            String              @db.Text
+  fileSize       Int?                @map("file_size")
+  description    String?             @db.Text
+  createdAt      DateTime            @default(now()) @map("created_at")
+
+  dispute  Dispute @relation(fields: [disputeId], references: [id], onDelete: Cascade)
+  uploader User    @relation(fields: [uploaderUserId], references: [id], onDelete: Cascade)
+
+  @@index([disputeId, createdAt])
+  @@map("dispute_evidences")
+}
+
+model AuditLog {
+  id           String   @id @default(uuid())
+  actorUserId  String?  @map("actor_user_id")
+  actorRole    String?  @map("actor_role") @db.VarChar(20)
+  action       String   @db.VarChar(80)
+  resourceType String   @map("resource_type") @db.VarChar(80)
+  resourceId   String   @map("resource_id") @db.VarChar(191)
+  detailsJson  String?  @map("details_json") @db.Text
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  actor User? @relation(fields: [actorUserId], references: [id], onDelete: SetNull)
+
+  @@index([actorUserId, createdAt])
+  @@index([resourceType, resourceId, createdAt])
+  @@map("audit_logs")
 }
